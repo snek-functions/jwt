@@ -36,18 +36,6 @@ export class UnauthorizedError extends GraphQLError {
   }
 }
 
-export class AuthenticationFailedError extends GraphQLError {
-  extensions: GraphQLErrorExtensions;
-  constructor() {
-    super("Authentication failed");
-    this.extensions = {
-      statusCode: 401,
-      code: "AUTHENTICATION_FAILED",
-      description: "Authentication failed",
-    };
-  }
-}
-
 export class ResourceIdNotProvided extends GraphQLError {
   extensions: GraphQLErrorExtensions;
   constructor() {
@@ -59,4 +47,3 @@ export class ResourceIdNotProvided extends GraphQLError {
     };
   }
 }
-

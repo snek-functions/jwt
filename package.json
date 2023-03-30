@@ -1,7 +1,7 @@
 {
   "name": "@snek-functions/jwt",
   "baseURL": "https://services.snek.at/jwt",
-  "version": "0.0.10",
+  "version": "0.0.15",
   "type": "module",
   "description": "Generated with `sf new`",
   "author": "snek-at",

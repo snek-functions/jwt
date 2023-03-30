@@ -47,6 +47,29 @@ export const loginRequired: Decorator<
 };
 
 /**
+ * A decorator that checks if the user is logged in and authenticated on any resource.
+ */
+export const anyLoginRequired = async (
+  context
+): Promise<AuthenticationResult[]> => {
+  // Retrieve authentication information from the context
+  const authenticationContext = new AuthenticationContext(context);
+  const authenticationInfos =
+    await authenticationContext.getAllAuthenticationInfo();
+
+  // Check if the user is authenticated on any resource
+  if (authenticationInfos.length > 0) {
+    // If the user is authenticated, continue with the decorated function and return the result
+    return authenticationInfos.map((authenticationInfo) => ({
+      authenticationInfo,
+    }));
+  }
+
+  // If the user is not authenticated, throw an authentication required error
+  throw new AuthenticationRequiredError();
+};
+
+/**
  * A decorator that checks if a userId is authenticated
  */
 export const userIdRequired: Decorator<
@@ -86,7 +109,7 @@ export const adminRequired: typeof loginRequired = async (
   const { authenticationInfo } = await loginRequired(context, [resourceId]);
 
   // Check if the user is an admin
-  if (authenticationInfo.scope["admin"].includes("*")) {
+  if (authenticationInfo.scope["admin"]?.includes("*")) {
     // If the user is an admin, continue with the decorated function
     return {
       authenticationInfo,

@@ -1,6 +1,5 @@
-import { Context } from "@snek-at/function/dist/withContext";
-
-import { AuthenticationFailedError } from "./errors.js";
+import { Context } from "@snek-at/function";
+import { GraphQLError } from "graphql";
 
 import { sq } from "./index.js";
 
@@ -14,8 +13,6 @@ export interface AuthenticationInfo {
 }
 
 export default class AuthenticationContext {
-  static accessTokenBlacklist: string[] = [];
-
   constructor(public context: Context) {
     this.context = context;
   }
@@ -30,12 +27,6 @@ export default class AuthenticationContext {
     for (const authHeader of authHeaders) {
       // Get the token from the Authorization header
       const token = authHeader.split(" ")[1];
-
-      // Check if the token is in the blacklist
-      if (AuthenticationContext.accessTokenBlacklist.includes(token)) {
-        // If it is, throw an error
-        throw new AuthenticationFailedError();
-      }
 
       // If it is not, add it to the list of all access tokens
       allAccessToken.push(token);
@@ -58,7 +49,9 @@ export default class AuthenticationContext {
       });
 
       if (errors) {
-        throw errors;
+        throw new GraphQLError(errors[0].message, {
+          extensions: errors[0].extensions,
+        });
       }
 
       infos.push(userToken);
