@@ -1,9 +1,12 @@
 import { Context } from "@snek-at/function";
 import { GraphQLError } from "graphql";
 
+import { InvalidTokenError } from "./errors.js";
+import { sq as sqIAM } from "./iam/index.js";
 import { sq } from "./index.js";
 
 export interface AuthenticationInfo {
+  jti: string;
   resourceId: string;
   userId: string;
   scope: {
@@ -22,39 +25,64 @@ export default class AuthenticationContext {
     const authHeaders =
       this.context.req.headers.authorization?.split(", ") || [];
 
-    const allAccessToken: string[] = [];
-
-    for (const authHeader of authHeaders) {
-      // Get the token from the Authorization header
-      const token = authHeader.split(" ")[1];
-
-      // If it is not, add it to the list of all access tokens
-      allAccessToken.push(token);
-    }
-
     const infos: AuthenticationInfo[] = [];
 
-    for (const accessToken of allAccessToken) {
-      const [userToken, errors] = await sq.query((Query) => {
-        const decoded = Query.tokenRead({
-          token: accessToken,
-        });
+    for (const authHeader of authHeaders) {
+      const [prefix, token] = authHeader.split(" ");
 
-        return {
-          resourceId: decoded.resourceId,
-          userId: decoded.sub,
-          scope: decoded.scope,
-          expiresAt: new Date(decoded.exp).toISOString(),
-        };
-      });
+      switch (prefix) {
+        case "Bearer":
+          const [jwtUserToken, jwtErrors] = await sq.query((Query) => {
+            const decoded = Query.tokenVerify({
+              token,
+            });
 
-      if (errors) {
-        throw new GraphQLError(errors[0].message, {
-          extensions: errors[0].extensions,
-        });
+            return {
+              jti: decoded.jti,
+              resourceId: decoded.resourceId,
+              userId: decoded.sub,
+              scope: decoded.scope,
+              expiresAt: new Date(decoded.exp).toISOString(),
+            };
+          });
+
+          if (jwtErrors) {
+            throw new GraphQLError(jwtErrors[0].message, {
+              extensions: jwtErrors[0].extensions,
+            });
+          }
+
+          infos.push(jwtUserToken);
+
+          break;
+
+        case "Token":
+          const [iamUserToken, iamErrors] = await sqIAM.query((Query) => {
+            const decoded = Query.userTokenVerify({
+              token,
+            });
+
+            return {
+              jti: decoded.jti,
+              resourceId: decoded.resourceId,
+              userId: decoded.sub,
+              scope: decoded.scope,
+              expiresAt: new Date(decoded.exp).toISOString(),
+            };
+          });
+
+          if (iamErrors) {
+            throw new GraphQLError(iamErrors[0].message, {
+              extensions: iamErrors[0].extensions,
+            });
+          }
+
+          infos.push(iamUserToken);
+
+          break;
+        default:
+          throw new InvalidTokenError();
       }
-
-      infos.push(userToken);
     }
 
     return infos;

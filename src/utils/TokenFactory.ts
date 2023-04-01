@@ -13,10 +13,12 @@ interface FactoryToken {
 }
 
 export class TokenPair {
+  id: string;
   accessToken: string;
   refreshToken: string;
 
-  constructor(accessToken: string, refreshToken: string) {
+  constructor(id: string, accessToken: string, refreshToken: string) {
+    this.id = id;
     this.accessToken = accessToken;
     this.refreshToken = refreshToken;
   }
@@ -35,16 +37,39 @@ interface UserTokenPayload {
   scope: { [key: string]: string[] };
   iat?: number;
   exp?: number;
-  jti?: string;
+  jti: string;
+}
+
+export interface TokenFactoryOptions {
+  signingKey?: string;
+  accessTokenDuration?: string;
+  refreshTokenDuration?: string;
 }
 
 export class TokenFactory {
-  private static readonly SHARED_SECRET = process.env.SHARED_SECRET || "snek-0";
-  private static readonly ISSUER = process.env.ISSUER || "snek-0";
-  private static readonly ACCESS_TOKEN_DURATION = "5m";
-  private static readonly REFRESH_TOKEN_DURATION = "30d";
+  private readonly ISSUER = process.env.ISSUER || "snek-0";
 
-  private static createToken(
+  private signingKey: string = process.env.SHARED_SECRET || "snek-0";
+  private accessTokenDuration: string = "5m";
+  private refreshTokenDuration: string = "30d";
+
+  constructor(options?: TokenFactoryOptions) {
+    if (options) {
+      if (options.signingKey) {
+        this.signingKey = options.signingKey;
+      }
+
+      if (options.accessTokenDuration) {
+        this.accessTokenDuration = options.accessTokenDuration;
+      }
+
+      if (options.refreshTokenDuration) {
+        this.refreshTokenDuration = options.refreshTokenDuration;
+      }
+    }
+  }
+
+  private createToken(
     type: "access" | "refresh",
     ids: {
       userId: string;
@@ -58,19 +83,19 @@ export class TokenFactory {
     let duration: string | undefined = undefined;
 
     if (type === "access") {
-      duration = this.ACCESS_TOKEN_DURATION;
+      duration = this.accessTokenDuration;
     } else if (type === "refresh") {
-      duration = this.REFRESH_TOKEN_DURATION;
+      duration = this.refreshTokenDuration;
     }
 
-    const payload: UserTokenPayload = {
+    const payload = {
       sub: ids.userId,
       resourceId: ids.resourceId,
       type,
       scope,
     };
 
-    const token = jwta.sign(payload, this.SHARED_SECRET, {
+    const token = jwta.sign(payload, this.signingKey, {
       algorithm: "HS256",
       expiresIn: duration,
       issuer: this.ISSUER,
@@ -84,27 +109,45 @@ export class TokenFactory {
     };
   }
 
-  static readToken(token: string, options?: VerifyOptions): UserTokenPayload {
+  private checkUserTokenPayload(payload: UserTokenPayload): void {
+    if (!payload.scope || !payload.sub || !payload.resourceId || !payload.jti) {
+      throw new InvalidTokenError();
+    }
+  }
+
+  verifyToken(token: string, options?: VerifyOptions): UserTokenPayload {
     let payload: UserTokenPayload;
 
     try {
       payload = jwta.verify(
         token,
-        this.SHARED_SECRET,
+        this.signingKey,
         options
       ) as UserTokenPayload;
     } catch {
       throw new TokenExpiredError();
     }
 
-    if (!payload.scope) {
-      throw new InvalidTokenError();
-    }
+    this.checkUserTokenPayload(payload);
 
     return payload;
   }
 
-  static createTokenPair(
+  decodeToken(token: string): UserTokenPayload {
+    let payload: UserTokenPayload;
+
+    try {
+      payload = jwta.decode(token) as UserTokenPayload;
+    } catch {
+      throw new TokenExpiredError();
+    }
+
+    this.checkUserTokenPayload(payload);
+
+    return payload;
+  }
+
+  createTokenPair(
     ids: {
       userId: string;
       resourceId: string;
@@ -131,7 +174,11 @@ export class TokenFactory {
         accessToken.jwtId
       );
 
-      return new TokenPair(accessToken.token, refreshToken.token);
+      return new TokenPair(
+        accessToken.jwtId,
+        accessToken.token,
+        refreshToken.token
+      );
     } else {
       const accessToken = this.createToken("access", ids, scope);
       const refreshToken = this.createToken(
@@ -141,15 +188,19 @@ export class TokenFactory {
         accessToken.jwtId
       );
 
-      return new TokenPair(accessToken.token, refreshToken.token);
+      return new TokenPair(
+        accessToken.jwtId,
+        accessToken.token,
+        refreshToken.token
+      );
     }
   }
 
-  static createTokenPairFromRefreshToken(token: string): TokenPair {
+  createTokenPairFromRefreshToken(token: string): TokenPair {
     let payload;
 
     try {
-      payload = this.readToken(token);
+      payload = this.verifyToken(token);
     } catch (e) {
       throw new RefreshTokenExpiredError();
     }

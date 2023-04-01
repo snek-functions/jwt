@@ -1,11 +1,20 @@
 import { defineService } from "@snek-at/function";
 
-import { TokenFactory } from "./utils/TokenFactory";
+import { TokenFactory, TokenFactoryOptions } from "./utils/TokenFactory";
 
 export default defineService({
   Query: {
-    tokenRead: (token: string) => {
-      const decodedToken = TokenFactory.readToken(token);
+    tokenVerify: (token: string, factoryOptions?: TokenFactoryOptions) => {
+      const factory = new TokenFactory(factoryOptions);
+
+      const decodedToken = factory.verifyToken(token);
+
+      return decodedToken;
+    },
+    tokenDecode: (token: string, factoryOptions?: TokenFactoryOptions) => {
+      const factory = new TokenFactory(factoryOptions);
+
+      const decodedToken = factory.decodeToken(token);
 
       return decodedToken;
     },
@@ -16,9 +25,12 @@ export default defineService({
       resourceId: string,
       scope: {
         [key: string]: string[];
-      }
+      },
+      factoryOptions?: TokenFactoryOptions
     ) => {
-      const tokenPair = TokenFactory.createTokenPair(
+      const factory = new TokenFactory(factoryOptions);
+
+      const tokenPair = factory.createTokenPair(
         {
           userId,
           resourceId,
@@ -28,14 +40,20 @@ export default defineService({
 
       return tokenPair;
     },
-    tokenRefresh: (accessToken: string, refreshToken: string) => {
+    tokenRefresh: (
+      accessToken: string,
+      refreshToken: string,
+      factoryOptions?: TokenFactoryOptions
+    ) => {
+      const factory = new TokenFactory(factoryOptions);
+
       // make sure the access token is valid
-      TokenFactory.readToken(accessToken, {
+      factory.verifyToken(accessToken, {
         ignoreExpiration: true,
       });
 
       const refreshedTokenPair =
-        TokenFactory.createTokenPairFromRefreshToken(refreshToken);
+        factory.createTokenPairFromRefreshToken(refreshToken);
 
       return refreshedTokenPair;
     },

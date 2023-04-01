@@ -18,7 +18,7 @@ interface AuthenticationResult {
  */
 export const loginRequired: Decorator<
   [resourceId: string],
-  Promise<AuthenticationResult>
+  AuthenticationResult
 > = async (context, [resourceId]) => {
   // Ensure that the resource ID is provided
   if (!resourceId) {
@@ -74,7 +74,7 @@ export const anyLoginRequired = async (
  */
 export const userIdRequired: Decorator<
   [userId: string],
-  Promise<AuthenticationResult>
+  AuthenticationResult
 > = async (context, [userId]) => {
   // Retrieve authentication information from the context
   const authenticationContext = new AuthenticationContext(context);
