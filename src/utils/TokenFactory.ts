@@ -30,7 +30,7 @@ export class TokenPair {
   }
 }
 
-interface UserTokenPayload {
+export interface UserTokenPayload {
   type: "access" | "refresh";
   sub: string;
   resourceId: string;

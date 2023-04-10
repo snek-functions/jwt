@@ -1,16 +1,11 @@
 {
   "name": "@snek-functions/jwt",
+  "private": true,
   "baseURL": "https://services.snek.at/jwt",
-  "version": "0.0.24",
+  "version": "0.0.27",
   "type": "module",
   "description": "Generated with `sf new`",
   "author": "snek-at",
-  "exports": {
-    ".": "./dist/index.js",
-    "./package.json": "./package.json"
-  },
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
   "files": [
     "dist",
     "package.json"
@@ -26,7 +21,7 @@
     "@snek-at/function-server": "*",
     "cors": "^2.8.5",
     "jsonwebtoken": "^9.0.0",
-    "snek-query": "^0.0.61"
+    "snek-query": "^0.0.67"
   },
   "devDependencies": {
     "@types/cors": "^2.8.13",
@@ -36,7 +31,6 @@
   },
   "scripts": {
     "develop": "yarn sf develop",
-    "build": "yarn sf build",
-    "build:client": "yarn snek-query build client -o dist"
+    "build": "yarn sf build"
   }
 }

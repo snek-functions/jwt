@@ -2,7 +2,7 @@ import { Context } from "@snek-at/function";
 import { GraphQLError } from "graphql";
 
 import { InvalidTokenError } from "./errors.js";
-import { sq as sqIAM } from "./iam/index.js";
+import { sq as sqIAM } from "./iam/src/index.js";
 import { sq } from "./index.js";
 
 export interface AuthenticationInfo {

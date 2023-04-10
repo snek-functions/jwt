@@ -1,4 +1,4 @@
-import { Decorator } from "@snek-at/function";
+import { Context, decorator } from "@snek-at/function";
 
 import AuthContext, { AuthenticationInfo } from "./AuthenticationContext.js";
 import {
@@ -10,7 +10,7 @@ import {
 /**
  * Context for authentication.
  */
-interface AuthenticationContext {
+export interface AuthenticationContext {
   /**
    * The authentication information.
    * If there is no authentication information available, this will be null.
@@ -30,27 +30,31 @@ interface AuthenticationContext {
  * If the user is authenticated, the decorator adds the authentication information to the `context.multiAuth` array.
  * If the user is not authenticated, the decorator throws an `AuthenticationRequiredError`.
  */
-export const requireAnyAuth: Decorator<
-  [],
-  { multiAuth: AuthenticationInfo[] }
-> = async (context) => {
+
+export const requireAnyAuth = decorator(async (context) => {
+  const ctx: Context<AuthenticationContext> = {
+    ...context,
+    multiAuth: [],
+    auth: null,
+  };
+
   // Retrieve authentication information from the context
   const authenticationContext = new AuthContext(context);
   const authenticationInfos =
     await authenticationContext.getAllAuthenticationInfo();
 
   if (authenticationInfos.length > 0) {
-    context.multiAuth = context.multiAuth || [];
+    ctx.multiAuth = ctx.multiAuth || [];
 
     for (const info of authenticationInfos) {
-      context.multiAuth.push(info);
+      ctx.multiAuth.push(info);
     }
 
-    return context;
+    return ctx;
   }
 
   throw new AuthenticationRequiredError();
-};
+});
 
 /**
  * A decorator that checks if the user is authenticated for the given resource.
@@ -60,30 +64,28 @@ export const requireAnyAuth: Decorator<
  * If the user is not authenticated or the `resourceId` parameter is not provided, the decorator throws an error.
  * @param resourceId The ID of the resource to check.
  */
-export const requireAuthForResource: Decorator<
-  [resourceId: string],
-  AuthenticationContext
-> = async (context, [resourceId]) => {
-  // Ensure that the resource ID is provided
-  if (!resourceId) {
-    throw new ResourceIdNotProvided();
+export const requireAuthForResource = decorator(
+  async (context, [resourceId]: [resourceId: string]) => {
+    // Ensure that the resource ID is provided
+    if (!resourceId) {
+      throw new ResourceIdNotProvided();
+    }
+
+    // Ensure that the user is authenticated
+    const ctx = await requireAnyAuth(context, []);
+
+    const auth = ctx.multiAuth.find((info) => info.resourceId === resourceId);
+
+    if (auth) {
+      ctx.auth = auth;
+
+      return ctx;
+    }
+
+    // If the user is not authenticated, throw an authentication required error
+    throw new AuthenticationRequiredError();
   }
-
-  // Ensure that the user is authenticated
-  const ctx = await requireAnyAuth(context, []);
-
-  const auth = ctx.multiAuth.find((info) => info.resourceId === resourceId);
-
-  if (auth) {
-    context.auth = auth;
-    context.multiAuth = ctx.multiAuth;
-
-    return context;
-  }
-
-  // If the user is not authenticated, throw an authentication required error
-  throw new AuthenticationRequiredError();
-};
+);
 
 /**
  * A decorator that checks if any user is authenticated.
@@ -93,23 +95,21 @@ export const requireAuthForResource: Decorator<
  * If no user is authenticated, the decorator throws an `AuthenticationRequiredError`.
  * @param userId The ID of the user to check.
  */
-export const requireUserAuth: Decorator<
-  [userId: string],
-  AuthenticationContext
-> = async (context, [userId]) => {
-  const ctx = await requireAnyAuth(context, []);
+export const requireUserAuth = decorator(
+  async (context, [userId]: [userId: string]) => {
+    const ctx = await requireAnyAuth(context, []);
 
-  const auth = ctx.multiAuth.find((info) => info.userId === userId);
+    const auth = ctx.multiAuth.find((info) => info.userId === userId);
 
-  if (auth) {
-    context.auth = auth;
-    context.multiAuth = ctx.multiAuth;
+    if (auth) {
+      ctx.auth = auth;
 
-    return context;
+      return ctx;
+    }
+
+    throw new AuthenticationRequiredError();
   }
-
-  throw new AuthenticationRequiredError();
-};
+);
 
 /**
  * A decorator that checks if the user is an admin for the given resource.
@@ -118,24 +118,23 @@ export const requireUserAuth: Decorator<
  * If the user is not authenticated or is not an admin for the resource, the decorator throws an `UnauthorizedError`.
  * @param resourceId The ID of the resource to check.
  */
-export const requireAdminForResource: Decorator<
-  [resourceId: string],
-  AuthenticationContext
-> = async (context, [resourceId]) => {
-  // Ensure that login is required
-  const ctx = await requireAuthForResource(context, [resourceId]);
+export const requireAdminForResource = decorator(
+  async (context, [resourceId]: [resourceId: string]) => {
+    // Ensure that login is required
+    const ctx = await requireAuthForResource(context, [resourceId]);
 
-  const auth = ctx.auth;
+    const auth = ctx.auth;
 
-  if (auth) {
-    // Check if the user is an admin
-    if (auth.scope["admin"]?.includes("*")) {
-      // If the user is an admin, continue with the decorated function
+    if (auth) {
+      // Check if the user is an admin
+      if (auth.scope["admin"]?.includes("*")) {
+        // If the user is an admin, continue with the decorated function
 
-      return ctx;
+        return ctx;
+      }
     }
-  }
 
-  // If the user is not an admin, throw an unauthorized error
-  throw new UnauthorizedError();
-};
+    // If the user is not an admin, throw an unauthorized error
+    throw new UnauthorizedError();
+  }
+);
