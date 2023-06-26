@@ -9,3 +9,4 @@ export const sq = makeSnekQuery(
 );
 
 export * from "./decorators.js";
+export * from "./errors.js";

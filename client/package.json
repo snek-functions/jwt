@@ -1,7 +1,7 @@
 {
   "name": "@snek-functions/jwt",
   "type": "module",
-  "version": "0.0.30",
+  "version": "0.0.33",
   "description": "Auto-generated API client",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
