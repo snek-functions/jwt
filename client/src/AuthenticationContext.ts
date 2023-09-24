@@ -4,6 +4,7 @@ import { GraphQLError } from "graphql";
 import { InvalidTokenError } from "./errors.js";
 import { sq as sqIAM } from "./iam/src/index.js";
 import { sq } from "./index.js";
+import { AuthenticationCache } from "./authentication-cache.js";
 
 export interface AuthenticationInfo {
   jti: string;
@@ -14,6 +15,8 @@ export interface AuthenticationInfo {
   };
   expiresAt: string;
 }
+
+const tokenCache = new AuthenticationCache();
 
 export default class AuthenticationContext {
   constructor(public context: Context) {
@@ -28,6 +31,13 @@ export default class AuthenticationContext {
     const infos: AuthenticationInfo[] = [];
 
     for (const authHeader of authHeaders) {
+      // Check if the authHeader is already cached
+      const cachedResponse = tokenCache.getCachedResponse(authHeader);
+      if (cachedResponse) {
+        infos.push(cachedResponse);
+        continue; // Skip token verification
+      }
+
       const [prefix, token] = authHeader.split(" ");
 
       switch (prefix) {
@@ -83,6 +93,9 @@ export default class AuthenticationContext {
         default:
           throw new InvalidTokenError();
       }
+
+      // Store the token and its response in the cache
+      tokenCache.storeResponse(authHeader, infos[infos.length - 1]);
     }
 
     return infos;
