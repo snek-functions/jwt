@@ -120,7 +120,7 @@ export class TokenFactory {
   }
 
   verifyToken(token: string, options?: VerifyOptions): UserTokenPayload {
-    let payload: UserTokenPayload;
+    let payload: UserTokenPayload & { resourceId?: string };
 
     try {
       payload = jwta.verify(
@@ -128,8 +128,13 @@ export class TokenFactory {
         this.signingKey,
         options
       ) as UserTokenPayload;
-    } catch {
+    } catch (e) {
       throw new TokenExpiredError();
+    }
+
+    // when a resourceId is provided, use it as the audience
+    if (payload.resourceId) {
+      payload.aud = payload.resourceId;
     }
 
     this.checkUserTokenPayload(payload);
@@ -138,12 +143,17 @@ export class TokenFactory {
   }
 
   decodeToken(token: string): UserTokenPayload {
-    let payload: UserTokenPayload;
+    let payload: UserTokenPayload & { resourceId?: string };
 
     try {
       payload = jwta.decode(token) as UserTokenPayload;
     } catch {
       throw new TokenExpiredError();
+    }
+
+    // when a resourceId is provided, use it as the audience
+    if (payload.resourceId) {
+      payload.aud = payload.resourceId;
     }
 
     this.checkUserTokenPayload(payload);
@@ -209,7 +219,7 @@ export class TokenFactory {
 
     try {
       payload = this.verifyToken(token);
-    } catch (e) {
+    } catch {
       throw new RefreshTokenExpiredError();
     }
 
