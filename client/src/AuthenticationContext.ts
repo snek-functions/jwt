@@ -53,6 +53,7 @@ export default class AuthenticationContext {
               resourceId: decoded.aud,
               userId: decoded.sub,
               scope: decoded.scope,
+              roles: decoded.roles,
               expiresAt: new Date(decoded.exp * 1000),
             };
           });
@@ -75,9 +76,10 @@ export default class AuthenticationContext {
 
             return {
               jti: decoded.jti,
-              resourceId: decoded.resourceId,
+              resourceId: decoded.aud,
               userId: decoded.sub,
               scope: decoded.scope,
+              roles: decoded.roles,
               expiresAt: new Date(decoded.exp * 1000),
             };
           });
