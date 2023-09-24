@@ -33,11 +33,12 @@ export class TokenPair {
 export interface UserTokenPayload {
   type: "access" | "refresh";
   sub: string;
-  resourceId: string;
   scope: { [key: string]: string[] };
+  roles?: string[];
   iat?: number;
   exp?: number;
   jti: string;
+  aud: string;
 }
 
 export interface TokenFactoryOptions {
@@ -71,11 +72,14 @@ export class TokenFactory {
 
   private createToken(
     type: "access" | "refresh",
-    ids: {
-      userId: string;
-      resourceId: string;
+    userId: string,
+    resourceId: string,
+
+    auth: {
+      scope: UserTokenPayload["scope"]; // deprecated in favor of roles
+      roles?: UserTokenPayload["roles"];
     },
-    scope: UserTokenPayload["scope"],
+
     jwtId?: string
   ): FactoryToken {
     jwtId = jwtId || crypto.randomUUID();
@@ -89,18 +93,18 @@ export class TokenFactory {
     }
 
     const payload = {
-      sub: ids.userId,
-      resourceId: ids.resourceId,
       type,
-      scope,
+      scope: auth.scope,
+      roles: auth.roles,
     };
 
     const token = jwta.sign(payload, this.signingKey, {
+      subject: userId,
       algorithm: "HS256",
       expiresIn: duration,
       issuer: this.ISSUER,
       jwtid: jwtId,
-      audience: "",
+      audience: resourceId,
     });
 
     return {
@@ -110,7 +114,7 @@ export class TokenFactory {
   }
 
   private checkUserTokenPayload(payload: UserTokenPayload): void {
-    if (!payload.scope || !payload.sub || !payload.resourceId || !payload.jti) {
+    if (!payload.scope || !payload.sub || !payload.aud || !payload.jti) {
       throw new InvalidTokenError();
     }
   }
@@ -148,29 +152,32 @@ export class TokenFactory {
   }
 
   createTokenPair(
-    ids: {
-      userId: string;
-      resourceId: string;
+    userId: string,
+    resourceId: string,
+    auth: {
+      scope: UserTokenPayload["scope"]; // deprecated in favor of roles
+      roles?: string[];
     },
-    scope: UserTokenPayload["scope"],
     refreshTokenPayload?: UserTokenPayload
   ): TokenPair {
     if (refreshTokenPayload) {
-      if (refreshTokenPayload.sub !== ids.userId) {
+      if (refreshTokenPayload.sub !== userId) {
         throw new InvalidTokenError();
       }
 
       const accessToken = this.createToken(
         "access",
-        ids,
-        scope,
+        userId,
+        resourceId,
+        auth,
         refreshTokenPayload.jti
       );
 
       const refreshToken = this.createToken(
         "refresh",
-        ids,
-        scope,
+        userId,
+        resourceId,
+        auth,
         accessToken.jwtId
       );
 
@@ -180,11 +187,12 @@ export class TokenFactory {
         refreshToken.token
       );
     } else {
-      const accessToken = this.createToken("access", ids, scope);
+      const accessToken = this.createToken("access", userId, resourceId, auth);
       const refreshToken = this.createToken(
         "refresh",
-        ids,
-        scope,
+        userId,
+        resourceId,
+        auth,
         accessToken.jwtId
       );
 
@@ -197,7 +205,7 @@ export class TokenFactory {
   }
 
   createTokenPairFromRefreshToken(token: string): TokenPair {
-    let payload;
+    let payload: UserTokenPayload;
 
     try {
       payload = this.verifyToken(token);
@@ -210,11 +218,12 @@ export class TokenFactory {
     }
 
     return this.createTokenPair(
+      payload.sub,
+      payload.aud,
       {
-        userId: payload.sub,
-        resourceId: payload.resourceId,
+        scope: payload.scope,
+        roles: payload.roles,
       },
-      payload.scope,
       payload
     );
   }

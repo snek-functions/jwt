@@ -21,7 +21,7 @@
     "@snek-at/function-server": "*",
     "cors": "^2.8.5",
     "jsonwebtoken": "^9.0.0",
-    "snek-query": "^0.0.67"
+    "snek-query": "^0.0.98"
   },
   "devDependencies": {
     "@types/cors": "^2.8.13",

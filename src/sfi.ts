@@ -26,17 +26,15 @@ export default defineService({
       scope: {
         [key: string]: string[];
       },
+      roles?: string[],
       factoryOptions?: TokenFactoryOptions
     ) => {
       const factory = new TokenFactory(factoryOptions);
 
-      const tokenPair = factory.createTokenPair(
-        {
-          userId,
-          resourceId,
-        },
-        scope
-      );
+      const tokenPair = factory.createTokenPair(userId, resourceId, {
+        scope,
+        roles,
+      });
 
       return tokenPair;
     },

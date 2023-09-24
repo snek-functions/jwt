@@ -13,7 +13,8 @@ export interface AuthenticationInfo {
   scope: {
     [key: string]: string[];
   };
-  expiresAt: string;
+  roles?: string[];
+  expiresAt: Date;
 }
 
 const tokenCache = new AuthenticationCache();
@@ -49,10 +50,10 @@ export default class AuthenticationContext {
 
             return {
               jti: decoded.jti,
-              resourceId: decoded.resourceId,
+              resourceId: decoded.aud,
               userId: decoded.sub,
               scope: decoded.scope,
-              expiresAt: new Date(decoded.exp).toISOString(),
+              expiresAt: new Date(decoded.exp * 1000),
             };
           });
 
@@ -77,7 +78,7 @@ export default class AuthenticationContext {
               resourceId: decoded.resourceId,
               userId: decoded.sub,
               scope: decoded.scope,
-              expiresAt: new Date(decoded.exp).toISOString(),
+              expiresAt: new Date(decoded.exp * 1000),
             };
           });
 

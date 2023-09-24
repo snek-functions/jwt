@@ -1,12 +1,12 @@
 
 import { proxy, arrayProxy, fnProxy, fnArrayProxy, t } from "snek-query";
 
-enum ACCESS_REFRESH {
+export enum ACCESS_REFRESH {
     access = "access",
     refresh = "refresh"
 }
 
-type TokenFactoryOptionsInput = {
+export type TokenFactoryOptionsInput = {
     signingKey?: t.String;
     accessTokenDuration?: t.String;
     refreshTokenDuration?: t.String;
@@ -29,12 +29,13 @@ export class UserTokenPayload {
     __typename: t.String;
     type: t.Nullable<ACCESS_REFRESH>;
     sub: t.String;
-    resourceId: t.String;
     scope: t.NotSupportedYet;
-    iat: t.Nullable<t.NotSupportedYet>;
-    exp: t.Nullable<t.NotSupportedYet>;
+    roles: t.Nullable<t.String>[];
+    iat: t.Nullable<t.Number>;
+    exp: t.Nullable<t.Number>;
     jti: t.String;
-    constructor() { this.__typename = ""; this.type = null; this.sub = ""; this.resourceId = ""; this.scope = null; this.iat = null; this.exp = null; this.jti = ""; }
+    aud: t.String;
+    constructor() { this.__typename = ""; this.type = null; this.sub = ""; this.scope = null; this.roles = []; this.iat = null; this.exp = null; this.jti = ""; this.aud = ""; }
 }
 export class Mutation {
     __typename: t.String;
@@ -42,6 +43,7 @@ export class Mutation {
         userId: t.String;
         resourceId: t.String;
         scope: t.NotSupportedYet;
+        roles?: t.String[];
         factoryOptions?: TokenFactoryOptionsInput;
     }) => TokenPair;
     tokenRefresh: (args: {

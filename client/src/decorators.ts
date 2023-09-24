@@ -127,7 +127,7 @@ export const requireAdminForResource = decorator(
 
     if (auth) {
       // Check if the user is an admin
-      if (auth.scope["admin"]?.includes("*")) {
+      if (auth.scope["admin"]?.includes("*") || auth.roles?.includes("admin")) {
         // If the user is an admin, continue with the decorated function
 
         return ctx;
