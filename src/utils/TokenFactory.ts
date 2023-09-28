@@ -34,7 +34,7 @@ export interface UserTokenPayload {
   type: "access" | "refresh";
   sub: string;
   scope: { [key: string]: string[] };
-  roles?: string[];
+  roles: string[];
   iat?: number;
   exp?: number;
   jti: string;
@@ -114,7 +114,13 @@ export class TokenFactory {
   }
 
   private checkUserTokenPayload(payload: UserTokenPayload): void {
-    if (!payload.scope || !payload.sub || !payload.aud || !payload.jti) {
+    if (
+      !payload.scope ||
+      !payload.sub ||
+      !payload.aud ||
+      !payload.jti ||
+      !payload.roles
+    ) {
       throw new InvalidTokenError();
     }
   }
@@ -136,6 +142,12 @@ export class TokenFactory {
     if (payload.resourceId) {
       payload.aud = payload.resourceId;
     }
+    if (!payload.roles) {
+      payload.roles = [];
+    }
+    if (!payload.scope) {
+      payload.scope = {};
+    }
 
     this.checkUserTokenPayload(payload);
 
@@ -154,6 +166,12 @@ export class TokenFactory {
     // when a resourceId is provided, use it as the audience
     if (payload.resourceId) {
       payload.aud = payload.resourceId;
+    }
+    if (!payload.roles) {
+      payload.roles = [];
+    }
+    if (!payload.scope) {
+      payload.scope = {};
     }
 
     this.checkUserTokenPayload(payload);

@@ -30,7 +30,7 @@ export class UserTokenPayload {
     type: t.Nullable<ACCESS_REFRESH>;
     sub: t.String;
     scope: t.NotSupportedYet;
-    roles: t.Nullable<t.String>[];
+    roles: t.String[];
     iat: t.Nullable<t.Number>;
     exp: t.Nullable<t.Number>;
     jti: t.String;
